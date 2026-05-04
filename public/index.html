@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TN Election 2026 – TVK Live Tracker</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:      #0f172a;
+      --card:    #1e293b;
+      --border:  #334155;
+      --text:    #e2e8f0;
+      --muted:   #94a3b8;
+      --tvk:     #f97316;
+      --dmk:     #dc2626;
+      --admk:    #16a34a;
+      --win:     #22c55e;
+      --risk:    #f59e0b;
+      --danger:  #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #0c1120;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .header-title { font-size: 1.05rem; font-weight: 700; color: var(--tvk); }
+    .header-title span { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .live-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--win);
+      box-shadow: 0 0 0 0 rgba(34,197,94,.5);
+      animation: livepulse 2s infinite;
+    }
+    @keyframes livepulse {
+      0%   { box-shadow: 0 0 0 0   rgba(34,197,94,.5); }
+      70%  { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0   rgba(34,197,94,0); }
+    }
+
+    .status-text { font-size: 0.78rem; color: var(--muted); }
+    .status-text b { color: var(--text); }
+
+    .countdown-wrap { font-size: 0.78rem; color: var(--muted); display:flex; align-items:center; gap:4px; }
+    #cdNum { color: var(--tvk); font-weight: 700; font-variant-numeric: tabular-nums; min-width: 22px; }
+
+    .btn {
+      padding: 5px 13px;
+      border: none; border-radius: 6px;
+      cursor: pointer; font-size: 0.82rem; font-weight: 600;
+      transition: opacity .15s;
+    }
+    .btn-orange { background: var(--tvk); color: #fff; }
+    .btn-orange:hover { opacity: .85; }
+    .btn-orange:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Main ── */
+    .main { max-width: 1380px; margin: 0 auto; padding: 18px 16px; }
+
+    /* ── Error banner ── */
+    .err-banner {
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.35);
+      border-radius: 8px; padding: 12px 16px;
+      color: #fca5a5; margin-bottom: 14px;
+      display: none;
+    }
+
+    /* ── Controls row ── */
+    .controls {
+      display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .ctrl-label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    select {
+      background: var(--card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 6px 12px; font-size: 0.88rem; cursor: pointer;
+    }
+    select:focus { outline: 2px solid var(--tvk); }
+    .ctrl-info { font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Loading ── */
+    .loading-state {
+      text-align: center; padding: 60px 20px; color: var(--muted);
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--tvk);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-state p { font-size: .9rem; }
+    .loading-state small { font-size: .78rem; opacity: .55; margin-top: 6px; display:block; }
+
+    /* ── TVK headline card ── */
+    .headline {
+      background: linear-gradient(135deg, rgba(249,115,22,.1), rgba(249,115,22,.04));
+      border: 1px solid rgba(249,115,22,.28);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 18px;
+      display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+    }
+    .headline-num { font-size: 3.8rem; font-weight: 900; color: var(--tvk); line-height: 1; }
+    .headline-label { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+    .headline-sub   { font-size: .95rem; font-weight: 600; }
+
+    .bar-wrap { flex: 1; min-width: 200px; }
+    .bar-bg { background: rgba(255,255,255,.1); border-radius: 6px; height: 14px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--tvk); border-radius: 6px; transition: width .6s ease; }
+    .bar-meta { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); margin-top: 5px; }
+    .bar-note { font-size: .78rem; margin-top: 5px; color: var(--risk); }
+    .bar-note.crossed { color: var(--win); }
+
+    /* ── Party summary tiles ── */
+    .party-row { display: flex; gap: 9px; flex-wrap: wrap; margin-bottom: 20px; }
+    .ptile {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top: 3px solid;
+      border-radius: 9px;
+      padding: 11px 15px;
+      text-align: center;
+      flex: 1; min-width: 72px;
+    }
+    .ptile-num  { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+    .ptile-name { font-size: .7rem; color: var(--muted); font-weight: 600; margin-top: 3px; }
+
+    /* ── Sections ── */
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .sec-header {
+      padding: 12px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .sec-header:hover { background: rgba(255,255,255,.03); }
+    .sec-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: .95rem; }
+    .sec-badge {
+      background: rgba(255,255,255,.1);
+      border-radius: 20px;
+      padding: 1px 9px;
+      font-size: .82rem; font-weight: 700;
+    }
+    .sec-hint { font-size: .72rem; color: var(--muted); font-weight: 400; }
+    .chevron { color: var(--muted); transition: transform .2s; font-size: 1rem; }
+    .section.collapsed .chevron { transform: rotate(-90deg); }
+    .section.collapsed .sec-body { display: none; }
+
+    /* ── Table ── */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th {
+      background: rgba(0,0,0,.25);
+      padding: 8px 13px;
+      text-align: left; color: var(--muted);
+      font-size: .7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    td { padding: 9px 13px; border-bottom: 1px solid rgba(255,255,255,.04); white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.025); }
+
+    /* ── Inline elements ── */
+    .pbadge {
+      display: inline-block;
+      padding: 2px 7px; border-radius: 4px;
+      font-size: .73rem; font-weight: 700; color: #fff;
+    }
+    .pbar {
+      display: inline-block;
+      background: rgba(255,255,255,.1);
+      border-radius: 4px; height: 5px; width: 72px;
+      vertical-align: middle; overflow: hidden;
+    }
+    .pbar-fill { height: 100%; border-radius: 4px; }
+    .pct-txt { font-size: .73rem; color: var(--muted); vertical-align: middle; margin-left: 4px; }
+
+    .m-crit { color: #ef4444; font-weight: 700; }
+    .m-warn { color: #f59e0b; font-weight: 700; }
+    .m-safe { color: #22c55e; }
+    .s-ok  { color: #22c55e; font-size: .72rem; }
+    .s-prog { color: var(--muted); font-size: .72rem; }
+
+    .empty { padding: 26px; text-align: center; color: var(--muted); font-size: .85rem; }
+
+    /* ── Footer ── */
+    .footer { text-align: center; padding: 22px 16px 30px; color: var(--muted); font-size: .75rem; }
+    .footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ HEADER ═════════════════════════════════ -->
+<header class="header">
+  <div>
+    <div class="header-title">
+      🗳️ TN Election 2026 &nbsp;
+      <span>Tamil Nadu Assembly — TVK Live Tracker</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="live-dot"></span>
+    <div class="countdown-wrap">Refresh in <span id="cdNum">60</span>s</div>
+    <div class="status-text">Updated: <b id="updatedAt">—</b></div>
+    <button class="btn btn-orange" id="refreshBtn" onclick="manualRefresh()">↻ Refresh Now</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════ MAIN ══════════════════════════════════ -->
+<main class="main">
+
+  <div class="err-banner" id="errBanner"></div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <span class="ctrl-label">Close-contest threshold:</span>
+    <select id="threshold" onchange="render()">
+      <option value="500">≤ 500 votes</option>
+      <option value="1000">≤ 1,000 votes</option>
+      <option value="1500" selected>≤ 1,500 votes</option>
+      <option value="2000">≤ 2,000 votes</option>
+      <option value="2500">≤ 2,500 votes</option>
+      <option value="3000">≤ 3,000 votes</option>
+      <option value="3500">≤ 3,500 votes</option>
+      <option value="4000">≤ 4,000 votes</option>
+      <option value="4500">≤ 4,500 votes</option>
+      <option value="5000">≤ 5,000 votes</option>
+    </select>
+    <span class="ctrl-info" id="loadedInfo"></span>
+  </div>
+
+  <!-- Loading state -->
+  <div class="loading-state" id="loadingState">
+    <div class="spinner"></div>
+    <p>Fetching live data from ECI…</p>
+    <small>Pulling all 12 pages — takes ~10–15 s</small>
+  </div>
+
+  <!-- Dashboard (hidden until first load) -->
+  <div id="dashboard" style="display:none">
+
+    <!-- TVK headline -->
+    <div class="headline">
+      <div>
+        <div class="headline-num" id="tvkNum">—</div>
+        <div class="headline-label">Constituencies</div>
+        <div class="headline-sub">TVK Leading</div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-bg"><div class="bar-fill" id="tvkBarFill" style="width:0%"></div></div>
+        <div class="bar-meta">
+          <span id="tvkPct">0%</span>
+          <span id="tvkOf">of 234 seats</span>
+        </div>
+        <div class="bar-note" id="majorityNote"></div>
+      </div>
+    </div>
+
+    <!-- Party summary tiles -->
+    <div class="party-row" id="partyRow"></div>
+
+    <!-- Section A: TVK at risk (TVK leading but margin < threshold) -->
+    <div class="section" id="secRisk">
+      <div class="sec-header" onclick="toggle('secRisk')">
+        <div class="sec-title">
+          <span style="color:var(--risk)">⚠️ TVK Leading — At Risk</span>
+          <span class="sec-badge" id="riskBadge" style="color:var(--risk)">0</span>
+          <span class="sec-hint">(in progress only: TVK leads but margin &lt; threshold)</span>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="sec-body">
+        <div class="tbl-wrap" id="riskBody"></div>
+      </div>
+    </div>
+
+    <!-- Section B: TVK can catch up (other party leads, margin < threshold) -->
+    <div class="section" id="secCatch">
+      <div class="sec-header" onclick="toggle('secCatch')">
+        <div class="sec-title">
+          <span style="color:#38bdf8">🎯 TVK Can Catch Up</span>
+          <span class="sec-badge" id="catchBadge" style="color:#38bdf8">0</span>
+          <span class="sec-hint">(in progress only: other party leading, margin &lt; threshold)</span>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="sec-body">
+        <div class="tbl-wrap" id="catchBody"></div>
+      </div>
+    </div>
+
+    <!-- Section C: TVK clear winners (collapsed by default) -->
+    <div class="section collapsed" id="secWin">
+      <div class="sec-header" onclick="toggle('secWin')">
+        <div class="sec-title">
+          <span style="color:var(--tvk)">✅ TVK Clear / Done</span>
+          <span class="sec-badge" id="winBadge" style="color:var(--tvk)">0</span>
+          <span class="sec-hint">(TVK declared + in-progress seats with margin ≥ threshold)</span>
+        </div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="sec-body">
+        <div class="tbl-wrap" id="winBody"></div>
+      </div>
+    </div>
+
+  </div><!-- /dashboard -->
+
+</main>
+
+<footer class="footer">
+  Data source: <a href="https://results.eci.gov.in/ResultAcGenMay2026/partywiseresult-S22.htm" target="_blank">Election Commission of India</a>
+  &nbsp;·&nbsp; Auto-refreshes every 60 s &nbsp;·&nbsp; Last page update: 04/05/2026
+</footer>
+
+<!-- ═══════════════════════════════ SCRIPT ════════════════════════════════ -->
+<script>
+'use strict';
+
+// Party → colour map
+const PC = {
+  TVK:      '#f97316',
+  DMK:      '#dc2626',
+  ADMK:     '#16a34a',
+  PMK:      '#7c3aed',
+  INC:      '#0284c7',
+  IUML:     '#065f46',
+  BJP:      '#ea580c',
+  'CPI(M)': '#991b1b',
+  CPI:      '#b91c1c',
+  DMDK:     '#6d28d9',
+  VCK:      '#1d4ed8',
+  AMMK:     '#92400e',
+  IND:      '#475569',
+};
+
+function partyColor(p)  { return PC[p] || '#475569'; }
+function badge(party)   { return `<span class="pbadge" style="background:${partyColor(party)}">${party}</span>`; }
+
+function pbar(pct, color) {
+  return `<div class="pbar"><div class="pbar-fill" style="width:${pct}%;background:${color}"></div></div>`
+       + `<span class="pct-txt">${pct}%</span>`;
+}
+
+function marginClass(m, t) {
+  const r = m / t;
+  if (r < 0.33) return 'm-crit';
+  if (r < 0.67) return 'm-warn';
+  return 'm-safe';
+}
+
+function table(rows, cols, empty) {
+  if (!rows.length) return `<div class="empty">${empty}</div>`;
+  return `<table>
+    <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ── State ──
+let liveData  = null;
+let cdSeconds = 60;
+let cdTimer   = null;
+
+// ── Render ──
+function render() {
+  if (!liveData || !liveData.constituencies || liveData.constituencies.length === 0) return;
+
+  const thr  = parseInt(document.getElementById('threshold').value, 10);
+  const data = liveData.constituencies;
+  const TOTAL = 234;
+  const MAJORITY = 118;
+
+  const inProgress = data.filter(c => c.status !== 'Declared');
+  const tvkAll     = data.filter(c => c.leadingParty === 'TVK');
+  const tvkRisk    = inProgress
+    .filter(c => c.leadingParty === 'TVK' && c.margin < thr)
+    .sort((a,b)=>a.margin-b.margin);
+  // TVK clear/done bucket must reconcile with TVK total:
+  // TVK total = TVK at risk + TVK clear/done
+  const tvkWin     = tvkAll
+    .filter(c => c.status === 'Declared' || c.margin >= thr)
+    .sort((a,b) => {
+      if (a.status === 'Declared' && b.status !== 'Declared') return -1;
+      if (a.status !== 'Declared' && b.status === 'Declared') return 1;
+      return b.margin - a.margin;
+    });
+  const tvkCatch   = inProgress
+    .filter(c => c.leadingParty !== 'TVK' && c.margin < thr)
+    .sort((a,b)=>a.margin-b.margin);
+
+  // Headline
+  const count = tvkAll.length;
+  const pct   = ((count / TOTAL) * 100).toFixed(1);
+  document.getElementById('tvkNum').textContent     = count;
+  document.getElementById('tvkBarFill').style.width = pct + '%';
+  document.getElementById('tvkPct').textContent     = pct + '%';
+  document.getElementById('tvkOf').textContent      = `of ${TOTAL} seats (${data.length} counted)`;
+
+  const noteEl = document.getElementById('majorityNote');
+  const gap = MAJORITY - count;
+  if (gap > 0) {
+    noteEl.textContent = `Majority = ${MAJORITY} seats · TVK needs ${gap} more`;
+    noteEl.className   = 'bar-note';
+  } else {
+    noteEl.textContent = `✅ TVK has crossed majority (${MAJORITY} seats needed)`;
+    noteEl.className   = 'bar-note crossed';
+  }
+
+  // Party tiles
+  const summary = liveData.partySummary || {};
+  document.getElementById('partyRow').innerHTML =
+    Object.entries(summary).map(([p, n]) =>
+      `<div class="ptile" style="border-top-color:${partyColor(p)}">
+         <div class="ptile-num" style="color:${partyColor(p)}">${n}</div>
+         <div class="ptile-name">${p}</div>
+       </div>`
+    ).join('');
+
+  // Loaded info
+  document.getElementById('loadedInfo').textContent = `${data.length} / ${TOTAL} constituencies loaded`;
+
+  // Badges
+  document.getElementById('riskBadge').textContent  = tvkRisk.length;
+  document.getElementById('catchBadge').textContent = tvkCatch.length;
+  document.getElementById('winBadge').textContent   = tvkWin.length;
+
+  // ── At-Risk table ──
+  const riskRows = tvkRisk.map(c => {
+    const barColor = c.completionPct > 80 ? '#ef4444' : '#f59e0b';
+    return [
+      `<span style="color:var(--muted);font-size:.72rem">#${c.ac}</span>`,
+      `<strong>${c.name}</strong>`,
+      badge('TVK'),
+      `vs ${badge(c.trailingParty)}`,
+      `<span class="${marginClass(c.margin, thr)}">${c.margin.toLocaleString()}</span>`,
+      pbar(c.completionPct, barColor),
+      `<span class="${c.status==='Declared'?'s-ok':'s-prog'}">${c.status}</span>`,
+    ];
+  });
+  document.getElementById('riskBody').innerHTML = table(
+    riskRows,
+    ['AC', 'Constituency', 'TVK', 'Challenger', 'Margin', 'Counted', 'Status'],
+    '✅ No in-progress TVK constituency at risk under this threshold'
+  );
+
+  // ── Catch-up table ──
+  const catchRows = tvkCatch.map(c => {
+    const remaining = 100 - c.completionPct;
+    const barColor  = remaining > 50 ? '#22c55e' : '#f59e0b';
+    return [
+      `<span style="color:var(--muted);font-size:.72rem">#${c.ac}</span>`,
+      `<strong>${c.name}</strong>`,
+      badge(c.leadingParty),
+      `vs ${badge('TVK')}`,
+      `<span class="${marginClass(c.margin, thr)}">${c.margin.toLocaleString()}</span>`,
+      pbar(c.completionPct, barColor),
+      `<span class="${c.status==='Declared'?'s-ok':'s-prog'}">${c.status}</span>`,
+    ];
+  });
+  document.getElementById('catchBody').innerHTML = table(
+    catchRows,
+    ['AC', 'Constituency', 'Current Leader', 'vs TVK', 'Margin', 'Counted', 'Status'],
+    '🎯 No in-progress catchable constituency under this threshold'
+  );
+
+  // ── Clear winners table ──
+  const winRows = tvkWin.map(c => [
+    `<span style="color:var(--muted);font-size:.72rem">#${c.ac}</span>`,
+    `<strong>${c.name}</strong>`,
+    badge(c.trailingParty),
+    `<span class="m-safe">${c.margin.toLocaleString()}</span>`,
+    pbar(c.completionPct, '#22c55e'),
+    `<span class="${c.status==='Declared'?'s-ok':'s-prog'}">${c.status}</span>`,
+  ]);
+  document.getElementById('winBody').innerHTML = table(
+    winRows,
+    ['AC', 'Constituency', '2nd Place', 'Margin', 'Counted', 'Status'],
+    'No TVK clear/done constituencies yet'
+  );
+
+  // Show dashboard
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('dashboard').style.display    = 'block';
+}
+
+// ── Fetch ──
+async function loadData(force) {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled    = true;
+  btn.textContent = '⟳ Loading…';
+  document.getElementById('errBanner').style.display = 'none';
+
+  try {
+    const url = force ? '/api/refresh' : '/api/data';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    liveData = await res.json();
+
+    if (liveData.error) throw new Error(liveData.error);
+
+    if (liveData.timestamp) {
+      const d = new Date(liveData.timestamp);
+      document.getElementById('updatedAt').textContent =
+        d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    render();
+  } catch (err) {
+    const b = document.getElementById('errBanner');
+    b.textContent  = `⚠️ ${err.message} — will retry on next refresh.`;
+    b.style.display = 'block';
+    if (!liveData) {
+      document.getElementById('loadingState').innerHTML =
+        `<p style="color:var(--danger)">Failed to load data. Please try Refresh.</p>`;
+    }
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '↻ Refresh Now';
+  }
+}
+
+function manualRefresh() {
+  resetCountdown();
+  loadData(true);
+}
+
+function toggle(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+// ── Countdown ──
+function resetCountdown() {
+  cdSeconds = 60;
+  document.getElementById('cdNum').textContent = cdSeconds;
+  clearInterval(cdTimer);
+  cdTimer = setInterval(() => {
+    cdSeconds--;
+    document.getElementById('cdNum').textContent = cdSeconds;
+    if (cdSeconds <= 0) {
+      resetCountdown();
+      loadData(false);
+    }
+  }, 1000);
+}
+
+// ── Boot ──
+loadData(false);
+resetCountdown();
+</script>
+</body>
+</html>

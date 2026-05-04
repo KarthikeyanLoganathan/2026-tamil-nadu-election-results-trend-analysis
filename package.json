@@ -1,0 +1,15 @@
+{
+  "name": "tn-election-2026-dashboard",
+  "version": "1.0.0",
+  "description": "Tamil Nadu Assembly Election 2026 – TVK Live Tracker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.42.0"
+  }
+}
